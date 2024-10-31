@@ -6,15 +6,18 @@ from openai import OpenAI
 from jsonschema import validate, ValidationError
 import PyPDF2
 from docx import Document
-import io
 from PIL import Image
-import pytesseract
 import tiktoken
 import textract
 import os
 import tempfile
 import datetime
 from datetime import datetime
+import requests
+from pymongo import MongoClient
+from bson.binary import Binary
+import time
+
 
 client = OpenAI()
 
@@ -162,8 +165,7 @@ def generate_report_with_openai(user_inputs, arizona_laws, medical_literature):
         return None
 
 
-import requests
-import streamlit as st
+
 
 def fetch_arizona_laws(query):
     """Automatically search for Arizona laws using Google Scholar via SerpAPI."""
@@ -207,9 +209,7 @@ def fetch_medical_literature(query):
             })
     return medical_literature
 
-from pymongo import MongoClient
-from bson import ObjectId
-import gridfs
+
 
 # Connect to MongoDB
 def get_mongo_client():
@@ -221,11 +221,7 @@ def get_mongo_client():
 def init_gridfs(db):
     return gridfs.GridFS(db)
 
-import time
 
-
-from bson.binary import Binary
-import time
 
 # Store file in MongoDB without GridFS for files less than 16MB
 def store_file_in_mongodb(file, user_id, db, collection_name="files"):
@@ -264,7 +260,6 @@ def get_files_by_user_id(user_id, db, collection_name="files"):
     files = db[collection_name].find({"user_id": user_id})
     return list(files)
 
-import pdfkit
 
 # Main Streamlit app
 def main():
