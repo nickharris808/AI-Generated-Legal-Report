@@ -11,7 +11,7 @@ regex==2024.9.11
 requests==2.32.3
 setuptools==75.2.0
 streamlit==1.39.0
-six==1.16.0
+six
 textract==1.6.5
 tiktoken==0.8.0
 jsonschema==4.17.3
