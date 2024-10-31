@@ -391,8 +391,8 @@ def main():
     #                     mime="text/html"
     #                 )
                   
-            else:
-                st.warning("No reports found for the given User ID.")
+            # else:
+            #     st.warning("No reports found for the given User ID.")
 
     
 if __name__ == "__main__":
