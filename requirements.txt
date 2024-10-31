@@ -1,6 +1,6 @@
 numpy==2.1.2
 openai==1.52.0
-pandas==2.2.3
+pandas==2.2.2
 Pillow==10.4.0
 protobuf==5.28.2
 pymongo==4.10.1
