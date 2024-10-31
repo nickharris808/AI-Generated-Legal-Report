@@ -13,4 +13,9 @@ setuptools==75.2.0
 streamlit==1.39.0
 textract==1.6.5
 tiktoken==0.8.0
+jsonschema==4.17.3
+python-docx==0.8.11
+
+
+
 
