@@ -370,31 +370,31 @@ def main():
 
                     st.write(html_report, unsafe_allow_html=True)
                     st.download_button("Download Report", data=html_report, file_name=f"legal_report_{datetime.now().strftime('%Y%m%d')}.html", mime="text/html")
-            # st.session_state.step = 6
-    #         st.rerun()
-    # elif st.session_state.step == 6:
-    #     st.header("Retrieve and Display Reports")
-    #     user_id = st.text_input("Enter User ID to retrieve reports", value=st.session_state.user_inputs.get('user_id', ''))
-    #     if st.button("Retrieve Reports"):
-    #         reports = get_reports_by_user_id(user_id, db)
-    #         if reports:
+            st.session_state.step = 6
+            st.rerun()
+    elif st.session_state.step == 6:
+        st.header("Retrieve and Display Reports")
+        user_id = st.text_input("Enter User ID to retrieve reports", value=st.session_state.user_inputs.get('user_id', ''))
+        if st.button("Retrieve Reports"):
+            reports = get_reports_by_user_id(user_id, db)
+            if reports:
 
-    #             for report in reports:
-    #                 st.write(f"Report ID: {report['_id']}, Created At: {datetime.fromtimestamp(report['created_at'])}")
+                for report in reports:
+                    st.write(f"Report ID: {report['_id']}, Created At: {datetime.fromtimestamp(report['created_at'])}")
                     
-    #                 # Display the HTML report
-    #                 st.write(report["report_html"], unsafe_allow_html=True)
+                    # Display the HTML report
+                    st.write(report["report_html"], unsafe_allow_html=True)
 
-    #                 # Provide download button for the PDF
-    #                 st.download_button(
-    #                     label="Download",
-    #                     data=report["report_html"],
-    #                     file_name=f"report_{report['_id']}.html",
-    #                     mime="text/html"
-    #                 )
+                    # Provide download button for the PDF
+                    st.download_button(
+                        label="Download",
+                        data=report["report_html"],
+                        file_name=f"report_{report['_id']}.html",
+                        mime="text/html"
+                    )
                   
-            # else:
-            #     st.warning("No reports found for the given User ID.")
+            else:
+                st.warning("No reports found for the given User ID.")
 
     
 if __name__ == "__main__":
