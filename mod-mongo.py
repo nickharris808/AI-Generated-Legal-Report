@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import json
 import openai
 from openai import OpenAI
@@ -17,6 +16,7 @@ import requests
 from pymongo import MongoClient
 from bson.binary import Binary
 import time
+import pandas as pd
 
 
 client = OpenAI()
