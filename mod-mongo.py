@@ -312,7 +312,7 @@ def main():
         with st.form(key='step1_form'):
             user_id = st.text_input("User ID", value="1234")  # Placeholder for user ID
             client_name = st.text_input("Client Name", value=st.session_state.user_inputs.get('client_name', ''))
-            incident_date = st.date_input("Incident Date", value=pd.to_datetime(st.session_state.user_inputs.get('incident_date', '2024-01-01')))
+            incident_date = st.date_input("Incident Date",value=datetime.strptime(st.session_state.user_inputs.get('incident_date', '2024-01-01'), '%Y-%m-%d'))
             contact_info = st.text_input("Contact Information (Optional)", value=st.session_state.user_inputs.get('contact_info', ''))
             submit_step1 = st.form_submit_button("Next")
 
