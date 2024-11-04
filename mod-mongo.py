@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import json
 import openai
 from openai import OpenAI
@@ -16,8 +17,8 @@ import requests
 from pymongo import MongoClient
 from bson.binary import Binary
 import time
-#import pandas as pd
-
+import requests
+from bs4 import BeautifulSoup
 
 client = OpenAI()
 
@@ -44,7 +45,7 @@ def process_uploaded_files(files):
                 content = textract.process(temp_file_path).decode('utf-8')
                 extracted_contents.append({
                     'name': file.name,
-                    'content': truncate_text(content, 1000)  # Limit each file to 1000 tokens
+                    'content': content  # Limit each file to 1000 tokens
                 })
             except Exception as e:
                 extracted_contents.append({
@@ -63,12 +64,6 @@ def process_uploaded_files(files):
     
     return extracted_contents
 
-def truncate_text(text, max_tokens):
-    encoding = tiktoken.encoding_for_model("gpt-4")
-    tokens = encoding.encode(text)
-    if len(tokens) <= max_tokens:
-        return text
-    return encoding.decode(tokens[:max_tokens])
 
 def generate_report_with_openai(user_inputs, arizona_laws, medical_literature):
 
@@ -76,121 +71,139 @@ def generate_report_with_openai(user_inputs, arizona_laws, medical_literature):
     all_files = (user_inputs.get('documents', []) or []) + (user_inputs.get('photos', []) or [])
     processed_files = process_uploaded_files(all_files)
     
-    # Truncate incident overview
-    incident_overview = truncate_text(user_inputs.get('incident_overview', ''), 1000)
+    # # Truncate incident overview
+    incident_overview = user_inputs.get('incident_overview', '')  
+
     """Generate a comprehensive report using OpenAI, combining Arizona laws and medical literature."""
     
     # Format Arizona laws and medical literature as text
     arizona_law_text = "\n".join([f"- {law['title']}: {law['snippet']} (Link: {law['link']})" for law in arizona_laws])
     medical_literature_text = "\n".join([f"- {paper['title']}: {paper['snippet']} (Link: {paper['link']})" for paper in medical_literature])
 
+    # Format Arizona laws and medical literature as detailed text with content included
+    arizona_law_text = "\n\n".join([
+        f"<b>{law['title']}</b>:<br>{law['content']}<br><a href='{law['link']}'>Read more</a>"
+        for law in arizona_laws
+    ])
+
+    medical_literature_text = "\n\n".join([
+        f"<b>{paper['title']}</b>:<br>{paper['content']}<br><a href='{paper['link']}'>Read more</a>"
+        for paper in medical_literature
+])
+
     prompt = f"""
-    Generate a comprehensive legal report in HTML format based on the following information:
+    Generate a detailed and thorough legal report in HTML format based on the provided information. Ensure the report includes all relevant legal statutes, case precedents, and medical information crucial to the case, without omitting any essential details.
 
-    Client Name: {user_inputs.get('client_name')}
-    Incident Date: {user_inputs.get('incident_date')}
-    Contact Information: {user_inputs.get('contact_info', 'N/A')}
-    
-    Incident Overview: {incident_overview}
+    **Client Information:**
+    - Client Name: {user_inputs.get('client_name')}
+    - Incident Date: {user_inputs.get('incident_date')}
+    - Contact Information: {user_inputs.get('contact_info', 'N/A')}
 
-    Processed files : {processed_files}
-    Processed Files: {json.dumps(processed_files, indent=2)}    
-    Estimated Compensation:
+    **Incident Overview:**
+    {incident_overview}
+
+    **Processed Files:**
+    {json.dumps(processed_files, indent=2)}
+
+    **Estimated Compensation:**
     - Economic Damages: ${user_inputs.get('economic_damages', 0)}
     - Non-Economic Damages: ${user_inputs.get('non_economic_damages', 0)}
     - Punitive Damages: ${user_inputs.get('punitive_damages', 0)}
-    
-    Relevant Arizona Laws:
+
+    **Relevant Arizona Laws:**
     {arizona_law_text}
-    
-    Relevant Medical Literature:
+
+    **Relevant Medical Literature:**
     {medical_literature_text}
 
-    Provide the output in valid HTML format, including headers, paragraphs, and necessary formatting.
+    Please produce the output as valid HTML without Markdown formatting, code blocks, or any extra symbols. Structure the report according to the following sections and fields, providing detailed explanations where applicable:
 
-    Follow the following structure:
-    {{
-        "client_information": {{
-            "name": "Client's name",
-            "incident_date": "Date of the incident",
-            "contact_info": "Client's contact information"
-        }},
-        "incident_overview": "A detailed summary of the incident",
-        "document_analysis": [
-            {{
-                "file_name": "Name of the file",
-                "key_points": ["List of important points from this file"],
-                "relevance": "How this document relates to the case"
-            }}
-        ],
-        "legal_analysis": {{
-            "applicable_laws": [
-                "List of relevant laws and statutes"
-            ],
-            "case_strength": "An assessment of the overall strength of the case",
-            "legal_arguments": [
-                "List of potential legal arguments"
-            ]
-        }},
-        "damages_assessment": {{
-            "economic_damages": 0,
-            "non_economic_damages": 0,
-            "punitive_damages": 0,
-            "total_valuation": 0,
-            "explanation": "Brief explanation of the damages calculation"
-        }},
-        "action_plan": [
-            "List of recommended next steps"
-        ],
-        "conclusion": "A brief conclusion summarizing the case and its potential outcome"
-    }}
+    - **Client Information**: Name, Incident Date, and Contact Info.
+    - **Incident Overview**: A clear, thorough summary of the incident and its circumstances.
+    - **Document Analysis**: For each processed file, include:
+    - **File Name**: Name of the file.
+    - **Key Points**: A concise list of the most critical points or findings.
+    - **Relevance**: Explanation of how this document supports or impacts the case.
+    - **Legal Analysis**:
+    - **Applicable Laws**: Detailed list of relevant laws, statutes, and legal precedents.
+    - **Case Strength**: Assessment of the case’s overall strength and viability.
+    - **Legal Arguments**: Comprehensive list of potential legal arguments, tailored to this specific case.
+    - **Damages Assessment**:
+    - **Economic Damages**: Value and breakdown.
+    - **Non-Economic Damages**: Value and explanation.
+    - **Punitive Damages**: Value and rationale.
+    - **Total Valuation**: Summed total of damages.
+    - **Explanation**: Detailed reasoning behind each damage assessment.
+    - **Action Plan**: Suggested steps and strategies for moving forward with the case.
+    - **Conclusion**: Summarize the case’s potential outcome, considering all gathered evidence, legal analysis, and medical insights.
+
+    The report should be well-structured to provide clarity to both legal and non-legal readers. Output must be in valid HTML, adhering strictly to the format above, with no extra symbols, Markdown syntax, or code blocks.
     """
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a knowledgeable legal assistant. Generate a detailed legal report based on the provided information, formatted as valid HTML."},
+                {"role": "system", "content": "You are a knowledgeable legal assistant. Generate a detailed legal report based on the provided information, formatted as valid HTML without Markdown syntax or code blocks."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=4000,
-            n=1,
-            stop=None
         )
         html_content = response.choices[0].message.content.strip()
         return html_content
+
     except Exception as e:
         st.error(f"Error generating report: {str(e)}")
         return None
 
 
 
-
 def fetch_arizona_laws(query):
-    """Automatically search for Arizona laws using Google Scholar via SerpAPI."""
+    """Automatically search for the top 5 Arizona laws/cases and scrape their full content."""
     full_query = f"{query} Arizona law"
     params = {
         "q": full_query,
         "engine": "google_scholar",
-        "api_key": "c0fcb889fa2864af3d0b423adb345b8901feb48d807adfc5a908d6632f89398d"
+        "api_key": "your_serpapi_key_here"
     }
     response = requests.get("https://serpapi.com/search", params=params)
     arizona_laws = []
+    
     if response.status_code == 200:
         results = response.json().get('organic_results', [])
-        for result in results:
-            arizona_laws.append({
-                'title': result['title'],
-                'link': result['link'],
-                'snippet': result.get('snippet', 'No description available')
-            })
+        
+        for idx, result in enumerate(results):
+            if idx >= 5:  # Limit to the top 5 articles or cases
+                break
+            
+            title = result['title']
+            link = result['link']
+            
+            # Fetch and parse the full article content from the link
+            try:
+                law_response = requests.get(link)
+                law_soup = BeautifulSoup(law_response.text, 'html.parser')
+                
+                # Example: Attempt to extract the main content from common tags used in legal articles or cases
+                paragraphs = law_soup.find_all(['p', 'section', 'div'])
+                full_content = "\n".join(p.get_text() for p in paragraphs if p.get_text())
+                
+                # Append the content along with other metadata
+                arizona_laws.append({
+                    'title': title,
+                    'link': link,
+                    'content': full_content or "Content could not be fetched."
+                })
+            except Exception as e:
+                arizona_laws.append({
+                    'title': title,
+                    'link': link,
+                    'content': f"Error fetching content: {e}"
+                })
     return arizona_laws
 
 
-
 def fetch_medical_literature(query):
-    """Automatically search for relevant medical literature using Google Search via SerpAPI."""
+    """Automatically search for the top 5 relevant medical articles and scrape their full content."""
     full_query = f"{query} medical"
     params = {
         "q": full_query,
@@ -199,32 +212,48 @@ def fetch_medical_literature(query):
     }
     response = requests.get("https://serpapi.com/search", params=params)
     medical_literature = []
+    
     if response.status_code == 200:
         results = response.json().get('organic_results', [])
-        for result in results:
-            medical_literature.append({
-                'title': result['title'],
-                'link': result['link'],
-                'snippet': result.get('snippet', 'No description available')
-            })
+        
+        for idx, result in enumerate(results):
+            if idx >= 5:  # Stop after the top 5 articles
+                break
+            
+            title = result['title']
+            link = result['link']
+            
+            # Fetch and parse the full article from each URL
+            try:
+                article_response = requests.get(link)
+                article_soup = BeautifulSoup(article_response.text, 'html.parser')
+                
+                # Example: Try to extract the main content from common tags used for articles
+                paragraphs = article_soup.find_all(['p', 'article', 'div'])
+                full_content = "\n".join(p.get_text() for p in paragraphs if p.get_text())
+                
+                # Append the full content along with other metadata
+                medical_literature.append({
+                    'title': title,
+                    'link': link,
+                    'content': full_content or "Content could not be fetched."
+                })
+            except Exception as e:
+                medical_literature.append({
+                    'title': title,
+                    'link': link,
+                    'content': f"Error fetching content: {e}"
+                })
     return medical_literature
+
 
 
 
 # Connect to MongoDB
 def get_mongo_client():
-    
-    mongo_uri="mongodb+srv://ghufranhyder90:9f2jHnQWYkh4JydF@cluster0.ccz7h.mongodb.net/"
-    #mongo_uri = os.getenv("MONGO_URI")
-    client = MongoClient(mongo_uri)
-    #client = MongoClient("mongodb://localhost:27017/")  # Change this for MongoDB Atlas if needed
+    client = MongoClient("mongodb://localhost:27017/")  # Change this for MongoDB Atlas if needed
     db = client["legal_reports_db"]  # Create or connect to the database
     return db
-
-# Function to initialize GridFS (used if large files >16MB)
-def init_gridfs(db):
-    return gridfs.GridFS(db)
-
 
 
 # Store file in MongoDB without GridFS for files less than 16MB
@@ -284,8 +313,7 @@ def main():
         with st.form(key='step1_form'):
             user_id = st.text_input("User ID", value="1234")  # Placeholder for user ID
             client_name = st.text_input("Client Name", value=st.session_state.user_inputs.get('client_name', ''))
-            #incident_date = st.date_input("Incident Date", value=pd.to_datetime(st.session_state.user_inputs.get('incident_date', '2024-01-01')))
-            incident_date = st.date_input("Incident Date",value=datetime.strptime(st.session_state.user_inputs.get('incident_date', '2024-01-01'), '%Y-%m-%d'))
+            incident_date = st.date_input("Incident Date", value=pd.to_datetime(st.session_state.user_inputs.get('incident_date', '2024-01-01')))
             contact_info = st.text_input("Contact Information (Optional)", value=st.session_state.user_inputs.get('contact_info', ''))
             submit_step1 = st.form_submit_button("Next")
 
