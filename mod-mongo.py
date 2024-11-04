@@ -250,7 +250,8 @@ def fetch_medical_literature(query):
 
 # Connect to MongoDB
 def get_mongo_client():
-    client = MongoClient("mongodb://localhost:27017/")  # Change this for MongoDB Atlas if needed
+    mongo_uri = os.getenv("MONGO_URI")
+    client = MongoClient(mongo_uri)
     db = client["legal_reports_db"]  # Create or connect to the database
     return db
 
